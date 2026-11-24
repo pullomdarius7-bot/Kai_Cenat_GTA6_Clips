@@ -121,7 +121,7 @@ def build_overlay(path, banner, credit, chyron=None, banner_y=150, matte_h=0):
     return path
 
 
-def build_ass(path, cues, tags, cap_y, tag_y):
+def build_ass(path, cues, tags, cap_y, tag_y, extra=()):
     head = """[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
@@ -143,6 +143,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         rows.append(f"Dialogue: 1,{ass_ts(s)},{ass_ts(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y})}}{pop}{size}{txt}")
     for s, e, txt, col in tags:
         rows.append(f"Dialogue: 0,{ass_ts(s)},{ass_ts(e)},Tag,,0,0,0,,{{\\an5\\pos(540,{tag_y})\\c{COL[col]}}}{txt}")
+    for s, e, x, y, txt in extra:  # free-placed lines: (start, end, x, y, ass_text)
+        rows.append(f"Dialogue: 3,{ass_ts(s)},{ass_ts(e)},Cap,,0,0,0,,{{\\an5\\pos({x},{y})}}{txt}")
     Path(path).write_text(head + "\n".join(rows) + "\n", encoding="utf-8")
     return path
 
@@ -183,7 +185,12 @@ def make_cues(words, segs_t, seg_idx, replace, colors, max_words=3, big_last=Non
 
 def sfx_filter(kind, at, label):
     ms = int(at * 1000)
-    if kind == "thump":
+    if kind.startswith("pad:"):  # "pad:<seconds>" low cinematic swell that stops dead at the end
+        d = float(kind.split(":")[1])
+        src = ("aevalsrc='0.05*(sin(2*PI*110*t)+0.8*sin(2*PI*164.8*t)+0.6*sin(2*PI*220*t)"
+               f"+0.4*sin(2*PI*261.6*t))*(0.6+0.4*sin(2*PI*0.25*t))*min(1,t/{d * 0.6:.2f})"
+               f"':s=48000:d={d:.3f}")
+    elif kind == "thump":
         src = "aevalsrc='0.9*sin(2*PI*(48+40*exp(-t*18))*t)*exp(-t*7)':s=48000:d=0.6"
     else:  # whoosh: band-passed noise swell
         src = ("anoisesrc=d=0.7:c=pink:a=0.6:r=48000,bandpass=f=1800:w=1400,"

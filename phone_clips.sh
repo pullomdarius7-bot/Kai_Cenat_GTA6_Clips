@@ -16,7 +16,7 @@ mkdir -p "$DEST"
 
 declare -A NAMES=([1]=clip01_prayer [2]=clip02_adaptive_triggers [3]=clip03_new_zealand_fomo
                   [4]=clip04_2k_basketball [5]=clip05_screen_narration)
-declare -A LEN=([1]=32 [2]=34 [3]=50 [4]=25 [5]=32)
+declare -A LEN=([1]=32 [2]=34 [3]=50 [4]=25 [5]=42)
 
 for n in "$@"; do
   NAME=${NAMES[$n]}

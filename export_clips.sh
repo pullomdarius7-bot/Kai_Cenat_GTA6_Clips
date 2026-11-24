@@ -19,7 +19,7 @@ CLIPS=(
   "clip02_adaptive_triggers|00:27:59|00:28:43|5.0|34.0"
   "clip03_new_zealand_fomo|00:03:43|00:04:43|5.0|50.0"
   "clip04_2k_basketball|01:33:36|01:34:11|5.0|25.0"
-  "clip05_screen_narration|00:09:45|00:10:27|5.0|32.0"
+  "clip05_screen_narration|00:09:45|00:10:37|5.0|42.0"
 )
 
 COOKIE_ARGS=()
