@@ -191,6 +191,55 @@ def sfx_filter(kind, at, label):
     return f"{src},adelay={ms}|{ms},aformat=channel_layouts=stereo[{label}]"
 
 
+def render_split(src, segs, cam, face, bot, overlay_png, ass_path, out,
+                 header_h=300, cam_h=768, sfx=(), fps=30):
+    """40/60 split: small stream facecam box on top, gameplay crop below, dark header for the banner.
+
+    segs: (src_start, src_end, cam_zoom, bottom_zoom)
+    cam:  (x, y, w, h) of the facecam crop in the 1920x1080 source (aspect must be 1080:cam_h)
+    face: (x, y) of Kai's eyes in the source, kept at the same relative height on every zoom
+    bot:  (x, y, w, h) of the gameplay crop (aspect 1080:(1920-header_h-cam_h))
+    """
+    seam = header_h + cam_h
+    bot_h = 1920 - seam
+    cx, cy, cw, ch = cam
+    fxr, fyr = (face[0] - cx) / cw, (face[1] - cy) / ch
+    bx, by, bw, bh = bot
+    n = len(segs)
+    fc = [f"[0:v]split={n}[" + "][".join(f"vs{i}" for i in range(n)) + "]",
+          f"[0:a]asplit={n}[" + "][".join(f"as{i}" for i in range(n)) + "]"]
+    for i, (s, e, cz, bz) in enumerate(segs):
+        zw, zh = cw / cz, ch / cz
+        zx = min(max(cx, face[0] - fxr * zw), cx + cw - zw)
+        zy = min(max(cy, face[1] - fyr * zh), cy + ch - zh)
+        bzw, bzh = bw / bz, bh / bz
+        bzx, bzy = bx + (bw - bzw) / 2, by + (bh - bzh) / 2
+        d = e - s
+        fc.append(f"[vs{i}]trim={s}:{e},setpts=PTS-STARTPTS,fps={fps},split=2[c{i}][b{i}]")
+        fc.append(f"[c{i}]crop={zw:.0f}:{zh:.0f}:{zx:.0f}:{zy:.0f},scale=1080:{cam_h}:flags=lanczos,setsar=1[cam{i}]")
+        fc.append(f"[b{i}]crop={bzw:.0f}:{bzh:.0f}:{bzx:.0f}:{bzy:.0f},scale=1080:{bot_h}:flags=lanczos,setsar=1[bot{i}]")
+        fc.append(f"color=c=0x0c0c0e:s=1080x1920:r={fps}:d={d:.3f}[bg{i}]")
+        fc.append(f"[bg{i}][cam{i}]overlay=0:{header_h}[t{i}]")
+        fc.append(f"[t{i}][bot{i}]overlay=0:{seam}:shortest=1,trim=duration={d:.3f}[v{i}]")
+        fc.append(f"[as{i}]atrim={s}:{e},asetpts=PTS-STARTPTS,afade=t=in:d=0.01,"
+                  f"afade=t=out:st={d - 0.012:.3f}:d=0.012[a{i}]")
+    fc.append("".join(f"[v{i}][a{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=1[vc][ac]")
+    mix = "[ac]"
+    for k, (kind, at) in enumerate(sfx):
+        fc.append(sfx_filter(kind, at, f"sfx{k}"))
+        mix += f"[sfx{k}]"
+    fc.append(f"{mix}amix=inputs={1 + len(sfx)}:duration=first:normalize=0,"
+              "loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[aout]")
+    fc.append(f"[vc][1:v]overlay=0:0[vh];[vh]ass={ass_path}[vout]")
+    total = sum(e - s for s, e, *_ in segs)
+    subprocess.run(["ffmpeg", "-y", "-nostdin", "-loglevel", "error", "-i", str(src), "-i", str(overlay_png),
+                    "-filter_complex", ";".join(fc), "-map", "[vout]", "-map", "[aout]",
+                    "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart",
+                    "-t", f"{total:.3f}", str(out)], check=True)
+    return total
+
+
 def render_crop9x16(src, segs_t, overlay_png, ass_path, out, eye_frac=0.36, sfx=(), fps=30):
     """Full-bleed vertical crop following Kai's face; per-segment zoom with eyes locked at eye_frac."""
     n = len(segs_t)
