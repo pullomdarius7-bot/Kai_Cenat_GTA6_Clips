@@ -56,8 +56,13 @@ for entry in "${CLIPS[@]}"; do
   ffmpeg -y -nostdin -loglevel error -i "$WS/exports/${NAME}_capcut.mp4" \
     -vn -ac 1 -ar 16000 "$WS/raw/${NAME}_16k.wav"
 
-  # 4. Word-level .srt (max 3 words per caption)
-  python3 make_srt.py "$WS/raw/${NAME}_16k.wav" "$WS/exports/${NAME}.srt"
+  # 4. Word-level .srt (max 3 words per caption) -- skipped if faster-whisper isn't installed
+  #    (it usually can't install on Android/Termux; use CapCut's Auto Captions instead)
+  if python3 -c "import faster_whisper" 2>/dev/null; then
+    python3 make_srt.py "$WS/raw/${NAME}_16k.wav" "$WS/exports/${NAME}.srt"
+  else
+    echo "faster-whisper not installed -> skipping .srt (use CapCut Auto Captions)"
+  fi
 
   # 5. Quick QA: resolution, duration, black frames
   ffprobe -v error -select_streams v:0 -show_entries stream=width,height:format=duration \
@@ -67,3 +72,11 @@ for entry in "${CLIPS[@]}"; do
 done
 
 echo "Done. CapCut files are in $WS/exports/"
+
+# On Android (Termux), copy finished clips to the phone's Movies folder so CapCut can see them
+if [ -d "$HOME/storage/shared" ]; then
+  DEST="$HOME/storage/shared/Movies/KaiCenat_GTA6"
+  mkdir -p "$DEST"
+  cp "$WS"/exports/* "$DEST"/
+  echo "Copied to phone: Movies/KaiCenat_GTA6"
+fi
