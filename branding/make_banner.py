@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = Path(__file__).parent
-AVATAR = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "avatar_current.png"
+AVATAR = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "avatar_profile_1080.png"
 OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else HERE / "youtube_banner.png"
 W, H = 2560, 1440
 SAFE = (507, 508, 2053, 931)  # visible on every device (TV, desktop, phone)
@@ -67,23 +67,30 @@ size = 150
 while ImageDraw.Draw(img).textlength("VIRAL CLIPPPPS", font=ImageFont.truetype(BLACK, size)) > avail:
     size -= 2
 title_f = ImageFont.truetype(BLACK, size)
-dr.text((tx + 6, cy - size + 8), "VIRAL", font=title_f, fill=(0, 0, 0))
-dr.text((tx, cy - size), "VIRAL", font=title_f, fill="white")
+ty = cy - 45  # text block anchor
+dr.text((tx + 6, ty - size + 8), "VIRAL", font=title_f, fill=(0, 0, 0))
+dr.text((tx, ty - size), "VIRAL", font=title_f, fill="white")
 vw = dr.textlength("VIRAL ", font=title_f)
-dr.text((tx + vw + 6, cy - size + 8), "CLIPPPPS", font=title_f, fill=(0, 0, 0))
-dr.text((tx + vw, cy - size), "CLIPPPPS", font=title_f, fill=YEL)
+dr.text((tx + vw + 6, ty - size + 8), "CLIPPPPS", font=title_f, fill=(0, 0, 0))
+dr.text((tx + vw, ty - size), "CLIPPPPS", font=title_f, fill=YEL)
 
 tag_f = ImageFont.truetype(XB, 44)
-dr.text((tx + 4, cy + 12), "The stream moments you missed.", font=tag_f, fill="white")
+dr.text((tx + 4, ty + 12), "The stream moments you missed.", font=tag_f, fill="white")
 
 pill_f = ImageFont.truetype(XB, 30)
-px = tx
-for label, col in (("YouTube", RED), ("TikTok", GRN), ("Instagram", YEL)):
-    w = dr.textlength(label, font=pill_f)
-    dr.rounded_rectangle([px, cy + 88, px + w + 40, cy + 138], radius=25, fill=col)
-    dr.text((px + 20 + w / 2, cy + 113), label, font=pill_f, fill="black" if col == YEL else "white", anchor="mm")
-    px += w + 58
-dr.text((px + 6, cy + 113), "@viralclipppps", font=pill_f, fill="white", anchor="lm")
+ROWS = [  # (platform pills, handle)
+    ((("YouTube", RED), ("Instagram", YEL)), "@viralclipppps"),
+    ((("TikTok", GRN),), "@viralclipppps31"),
+]
+for r, (pills, handle) in enumerate(ROWS):
+    py = ty + 88 + r * 64
+    px = tx
+    for label, col in pills:
+        w = dr.textlength(label, font=pill_f)
+        dr.rounded_rectangle([px, py, px + w + 40, py + 50], radius=25, fill=col)
+        dr.text((px + 20 + w / 2, py + 25), label, font=pill_f, fill="black" if col == YEL else "white", anchor="mm")
+        px += w + 52
+    dr.text((px + 4, py + 25), handle, font=pill_f, fill="white", anchor="lm")
 
 img.save(OUT)
 print("wrote", OUT)
