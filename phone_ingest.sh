@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Termux: grab a stream's audio + YouTube captions, find the loudest moments,
-# and drop the transcript files in your phone's Download folder to send to Claude.
+# Termux: grab a stream's audio + YouTube captions + chat replay, find the loudest
+# moments and the chat hype spikes, and drop the results in your phone's Download
+# folder to send to Claude. Safe to re-run: steps that already finished are skipped.
 #
 # Usage:  bash phone_ingest.sh                 (uses the default stream below)
 #         bash phone_ingest.sh <YouTube URL>   (any other stream/VOD)
@@ -37,7 +38,12 @@ if [ -n "$JS_ARGS" ] && ! grep -q -- "--js-runtimes" "$CONF" 2>/dev/null; then
 fi
 
 ok=0
+if [ -s "$WS/transcript_readable.txt" ] && [ -s "$WS/audio_peaks.json" ]; then
+  echo "Audio + transcript already done, skipping straight to chat."
+  ok=1
+fi
 for attempt in 1 2 3; do
+  [ $ok -eq 1 ] && break
   if python tools/ingest_and_transcribe.py "$URL" --out-dir "$WS" --skip-whisper \
        > "$WS/ingest.log" 2>&1 && [ -s "$WS/transcript_readable.txt" ]; then
     ok=1; break
@@ -55,11 +61,26 @@ fi
 # 3) The big WAV file isn't needed anymore (the render step downloads its own piece)
 rm -f "$WS/audio_16k.wav"
 
+# 4) Chat replay -> chat hype spikes (a bonus: if it fails, everything else still counts)
+if [ ! -s "$WS/chat_peaks.json" ]; then
+  echo "Downloading chat replay (on a long stream this can take 5-15 minutes)..."
+  ls "$WS"/chat*.live_chat.json >/dev/null 2>&1 || \
+    yt-dlp --no-playlist --skip-download --write-subs --sub-langs live_chat \
+      -o "$WS/chat.%(ext)s" "$URL" > "$WS/chat.log" 2>&1
+  CHAT=$(ls "$WS"/chat*.live_chat.json 2>/dev/null | head -1)
+  if [ -n "$CHAT" ]; then
+    python tools/chat_peaks.py "$CHAT" --out-dir "$WS"
+  else
+    echo "No chat replay came down (it may not be saved on this video). Skipping chat."
+    tail -2 "$WS/chat.log"
+  fi
+fi
+
 cp "$WS"/transcript_readable.txt "$WS"/transcript_words.json "$WS"/audio_peaks.json "$DEST"/
-[ -f "$WS/meta.json" ] && cp "$WS/meta.json" "$DEST"/
+for f in meta.json chat_peaks.json; do [ -f "$WS/$f" ] && cp "$WS/$f" "$DEST"/; done
 command -v termux-media-scan >/dev/null && termux-media-scan -r "$DEST" >/dev/null 2>&1
 
 echo
 echo "DONE. Lines in transcript: $(wc -l < "$WS/transcript_readable.txt")"
 echo "Send Claude these files from Download/clip_ingest_$VID:"
-echo "  transcript_readable.txt   audio_peaks.json   (and meta.json if it's there)"
+echo "  transcript_readable.txt   audio_peaks.json   chat_peaks.json   (and meta.json if it's there)"

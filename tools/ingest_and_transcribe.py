@@ -9,6 +9,7 @@ Outputs into --out-dir:
   - audio_peaks.json        (top RMS loudness spikes in MM:SS)
   - transcript_words.json   (word-level timestamps for kinetic ASS captions)
   - transcript_readable.txt ([MM:SS - MM:SS] readable log for Phase 1 scoring)
+  - chat_peaks.json         (live-chat hype spikes; only with --with-chat or --chat-file)
 """
 
 import argparse
@@ -261,6 +262,24 @@ def transcribe_wav(wav_path: Path, out_dir: Path, model_name: str, language: str
     print(f"[done] Wrote {len(segments_out)} segments to {out_dir / 'transcript_readable.txt'}")
 
 
+def fetch_live_chat(source: str, out_dir: Path, cookies_browser: str | None) -> Path | None:
+    """Download YouTube chat replay. Non-fatal: chat is a bonus signal, so a
+    failure (no replay saved, Twitch/Kick URL, rate limit) only warns."""
+    cookie_args = ["--cookies-from-browser", cookies_browser] if cookies_browser else []
+    cmd = ["yt-dlp", "--no-playlist", "--skip-download", "--write-subs", "--sub-langs", "live_chat",
+           "-o", str(out_dir / "chat.%(ext)s"), *cookie_args, source]
+    print(f"[run] {' '.join(cmd)}")
+    print("[chat] Downloading chat replay (long streams can take several minutes)...")
+    subprocess.run(cmd, check=False)
+    found = sorted(out_dir.glob("chat*.live_chat.json"))
+    if not found:
+        print("[warn] No chat replay downloaded (none saved on this video, or not a YouTube "
+              "stream). For Twitch, export chat with TwitchDownloaderCLI and pass --chat-file.",
+              file=sys.stderr)
+        return None
+    return found[0]
+
+
 def _vtt_ts(ts: str) -> float:
     h, m, rest = ts.split(":")
     return int(h) * 3600 + int(m) * 60 + float(rest)
@@ -320,6 +339,9 @@ def main() -> None:
     parser.add_argument("--language", default=None, help="Optional language code (e.g. en)")
     parser.add_argument("--cookies-from-browser", default=None, help="Browser name for yt-dlp cookies (e.g. chrome)")
     parser.add_argument("--skip-whisper", action="store_true", help="Skip Whisper; build the transcript from YouTube auto-subtitles (URLs only)")
+    parser.add_argument("--with-chat", action="store_true", help="Also download YouTube chat replay and find chat hype spikes")
+    parser.add_argument("--chat-file", default=None, help="Local chat export (TwitchDownloader JSON, yt-dlp live_chat.json, or seconds,message CSV)")
+    parser.add_argument("--chat-lag", type=float, default=8.0, help="Seconds chat trails the stream (default 8)")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir).expanduser().resolve()
@@ -328,6 +350,15 @@ def main() -> None:
     wav_path = ingest_audio(args.source, out_dir, args.cookies_from_browser)
     peaks = detect_audio_peaks(wav_path, out_dir)
     print(f"[peaks] Detected {len(peaks)} top audio spikes -> {out_dir / 'audio_peaks.json'}")
+
+    chat_path = Path(args.chat_file).expanduser() if args.chat_file else None
+    if chat_path is None and args.with_chat and is_url(args.source):
+        chat_path = fetch_live_chat(args.source, out_dir, args.cookies_from_browser)
+    if chat_path is not None:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import chat_peaks  # bundled next to this script
+
+        chat_peaks.run(chat_path, out_dir, lag=args.chat_lag)
 
     if not args.skip_whisper:
         transcribe_wav(wav_path, out_dir, args.model, args.language)
