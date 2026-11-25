@@ -4,7 +4,7 @@
 **Credit Kai on every post:** TikTok **@kai_cenat** · Instagram **@kaicenat** · YouTube **@KaiCenatLive**
 **Source VOD:** https://www.youtube.com/live/VZqAPdUvqnQ
 
-Each clip below has a ready-to-paste TikTok caption, Instagram caption, and YouTube Shorts title + description, plus a comment to pin. Copy and paste them as-is.
+Post the **`_POST.mp4`** files (they have your avatar watermark). Each clip below has a ready-to-paste TikTok caption, Instagram caption, and YouTube Shorts title + description, plus a comment to pin. Copy and paste them as-is.
 
 ---
 
@@ -23,7 +23,7 @@ Each clip below has a ready-to-paste TikTok caption, Instagram caption, and YouT
 ---
 
 ## Clip 1: The 13-Year Prayer
-**File:** `clip01_prayer_FINAL.mp4` (23.6s)
+**File:** `clip01_prayer_POST.mp4` (23.6s)
 
 **TikTok**
 ```
@@ -56,7 +56,7 @@ Credit: Kai Cenat (@KaiCenatLive) - full stream: https://www.youtube.com/live/VZ
 ---
 
 ## Clip 2: Adaptive Triggers Ruined His First Robbery
-**File:** `clip02_adaptive_triggers_FINAL.mp4` (19s)
+**File:** `clip02_adaptive_triggers_POST.mp4` (19s)
 
 **TikTok**
 ```
@@ -89,7 +89,7 @@ Credit: Kai Cenat (@KaiCenatLive) - full stream: https://www.youtube.com/live/VZ
 ---
 
 ## Clip 3: Changed Servers to New Zealand
-**File:** `clip03_new_zealand_FINAL.mp4` (16.9s)
+**File:** `clip03_new_zealand_POST.mp4` (16.9s)
 
 **TikTok**
 ```
@@ -122,7 +122,7 @@ Credit: Kai Cenat (@KaiCenatLive) - full stream: https://www.youtube.com/live/VZ
 ---
 
 ## Clip 4: GTA 6 vs. 2K Basketball
-**File:** `clip04_2k_basketball_FINAL.mp4` (12.2s)
+**File:** `clip04_2k_basketball_POST.mp4` (12.2s)
 
 **TikTok**
 ```
@@ -155,7 +155,7 @@ Credit: Kai Cenat (@KaiCenatLive) - full stream: https://www.youtube.com/live/VZ
 ---
 
 ## Clip 5: 13 Years of Hype vs. Screen Narration
-**File:** `clip05_screen_narration_FINAL.mp4` (12.7s)
+**File:** `clip05_screen_narration_POST.mp4` (12.7s)
 
 **TikTok**
 ```
